@@ -1,7 +1,12 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using AutoMapper;
 using Entities;
 using Microsoft.AspNetCore.Http;
+using Microsoft.IdentityModel.Tokens;
 using Service.Dto;
+using Service.Dto.Request;
 using Service.Dto.Response;
 using Service.Helper;
 
@@ -39,8 +44,46 @@ public class UserService
         return new ApiResponse(mapper.Map<UserResponse>(user), Constants.User.USER_CREATED_SUCESSFULLY, StatusCodes.Status200OK);
     }
 
+    public async Task<ApiResponse> Login(LoginRequest dto)
+    {
+        var user = await userRepository.GetByEmailOrUserName(dto.EmailOrUserName);
+        if (user is null)
+        {
+            return new ApiResponse(null, Constants.User.INVALID_LOGIN_CREDENTIAL, StatusCodes.Status400BadRequest);
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PassWord))
+        {
+            return new ApiResponse(null, Constants.User.INVALID_LOGIN_CREDENTIAL, StatusCodes.Status400BadRequest);
+        }
+
+        return new ApiResponse(GenerateJwtToken(user.UserName), Constants.User.LOGGED_IN_SUCESSFULLY, StatusCodes.Status200OK);
+    }
+
     private static string HashPassword(string password)
     {
         return BCrypt.Net.BCrypt.HashPassword(password);
+    }
+
+    private string GenerateJwtToken(string username)
+    {
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("b2tpMjN4dXltcmZpNHRnbXNtZ2xpdXU="));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, username),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.NameId, 9090.ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: "http://localhost:5257/api/home/login",
+            audience: "http://localhost:5257",
+            claims: claims,
+            expires: DateTime.Now.AddMinutes(30),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

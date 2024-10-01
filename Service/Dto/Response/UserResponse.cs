@@ -2,6 +2,6 @@ namespace Service.Dto.Response;
 
 public class UserResponse
 {
-    public string UserName { get; set; }
-    public string Emailid { get; set; }
+    public required string UserName { get; set; }
+    public required string Emailid { get; set; }
 }

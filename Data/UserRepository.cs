@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices.Marshalling;
 using Data;
 using Data.Repository;
 using Entities;
@@ -19,6 +20,11 @@ public class UserRepository : BaseRepository
     public async Task<Users?> GetByUserName(string userName)
     {
         return await trendingNewsDbContext.Users.FirstOrDefaultAsync(it => it.UserName == userName);
+    }
+
+    public async Task<Users?> GetByEmailOrUserName(string emailOrUserName)
+    {
+        return await trendingNewsDbContext.Users.FirstOrDefaultAsync(it => it.EmailId == emailOrUserName || it.UserName == emailOrUserName);
     }
 }
 
